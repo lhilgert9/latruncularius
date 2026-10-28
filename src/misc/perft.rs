@@ -47,7 +47,7 @@ pub fn perft(board: &mut Board, depth: u8, mg: &MoveGenerator) -> u64 {
 
     for i in 0..move_list.len() {
         let m = move_list.get_move(i);
-        if board.make_move(m) {
+        if board.make_move(m, mg) {
             leaf_nodes += perft(board, depth - 1, mg);
             board.unmake_last_move();
         }

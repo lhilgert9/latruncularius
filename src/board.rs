@@ -1,3 +1,4 @@
+pub mod defs;
 mod display;
 pub mod fen;
 mod game_state;

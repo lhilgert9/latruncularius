@@ -5,8 +5,7 @@ use crate::{
     types::{
         bitboard::Bitboard,
         piece::Piece,
-        rank::{Rank, BB_RANKS},
-        side::Side,
+        rank::BB_RANKS,
         square::{Square, BB_SQUARES},
     },
 };
@@ -17,18 +16,10 @@ impl MoveGenerator {
     pub fn pawn_pushes(&self, board: &Board, move_list: &mut MoveList) {
         let us = board.us();
         let empty = board.empty();
-        let direction = if us == Side::White { 8 } else { -8 } as i8;
+        let direction = Board::pawn_direction(us);
         let shift = direction.abs() as u64;
-        let fourth_rank = if us == Side::White {
-            BB_RANKS[Rank::R4.idx()]
-        } else {
-            BB_RANKS[Rank::R5.idx()]
-        };
-        let promotion_rank = if us == Side::White {
-            BB_RANKS[Rank::R8.idx()]
-        } else {
-            BB_RANKS[Rank::R1.idx()]
-        };
+        let fourth_rank = BB_RANKS[Board::fourth_rank(us).idx()];
+        let promotion_rank = BB_RANKS[Board::promotion_rank(us).idx()];
         let mut pieces = board.bitboard_pieces[board.us()][Piece::Pawn];
         while pieces > Bitboard::empty() {
             let from = bits::next(&mut pieces);
@@ -47,11 +38,7 @@ impl MoveGenerator {
     pub fn pawn_captures(&self, board: &Board, move_list: &mut MoveList) {
         let us = board.us();
         let opponent_pieces = board.bitboard_sides[board.opponent()];
-        let promotion_rank = if us == Side::White {
-            BB_RANKS[Rank::R8.idx()]
-        } else {
-            BB_RANKS[Rank::R1.idx()]
-        };
+        let promotion_rank = BB_RANKS[Board::promotion_rank(us).idx()];
 
         let en_passant = board
             .game_state

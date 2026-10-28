@@ -1,21 +1,58 @@
+use std::ops::{Index, RangeInclusive};
+
 use crate::types::{bitboard::Bitboard, nrof::NrOf};
 
 pub const BB_FILES: [Bitboard; NrOf::FILES] = init_bb_files();
 
+#[derive(Clone, Copy, Debug)]
 pub enum File {
     A = 0,
     B,
-    _C,
-    _D,
-    _E,
-    _F,
+    C,
+    D,
+    E,
+    F,
     G,
     H,
 }
 
 impl File {
+    #[inline(always)]
+    pub const fn range() -> RangeInclusive<u8> {
+        RANGE
+    }
+
+    #[inline(always)]
     pub const fn idx(self) -> usize {
         self as usize
+    }
+}
+
+const RANGE: RangeInclusive<u8> = (File::A as u8)..=(File::H as u8);
+
+impl<T> Index<File> for [T; NrOf::FILES] {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, index: File) -> &Self::Output {
+        &self[index as usize]
+    }
+}
+
+impl From<usize> for File {
+    #[inline(always)]
+    fn from(value: usize) -> Self {
+        match value {
+            0 => Self::A,
+            1 => Self::B,
+            2 => Self::C,
+            3 => Self::D,
+            4 => Self::E,
+            5 => Self::F,
+            6 => Self::G,
+            7 => Self::H,
+            _ => panic!("Invalid usize for File: {}", value),
+        }
     }
 }
 

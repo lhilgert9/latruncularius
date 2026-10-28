@@ -1,6 +1,6 @@
 use crate::{
     board::Board,
-    movegen::defs::Move,
+    movegen::{defs::Move, MoveGenerator},
     types::{
         bitboard::Bitboard,
         castling::CastlingRights,
@@ -11,7 +11,7 @@ use crate::{
 };
 
 impl Board {
-    pub fn make_move(&mut self, m: Move) -> bool {
+    pub fn make_move(&mut self, m: Move, mg: &MoveGenerator) -> bool {
         let mut current_game_state = self.game_state;
         current_game_state.next_move = m;
         self.history.push(current_game_state);
@@ -109,7 +109,7 @@ impl Board {
             self.game_state.full_move_number += 1;
         }
 
-        let is_legal = true;
+        let is_legal = !mg.is_square_attacked(self, opponent, self.king_square(us));
         if !is_legal {
             self.unmake_last_move();
         }
@@ -165,14 +165,14 @@ impl Board {
 
 impl Board {
     fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
-        self.bitboard_pieces[side][piece] ^= BB_SQUARES[square.idx()];
-        self.bitboard_sides[side] ^= BB_SQUARES[square.idx()];
+        self.bitboard_pieces[side][piece] ^= BB_SQUARES[square];
+        self.bitboard_sides[side] ^= BB_SQUARES[square];
         self.pieces[square] = Piece::None;
     }
 
     fn put_piece(&mut self, side: Side, piece: Piece, square: Square) {
-        self.bitboard_pieces[side][piece] |= BB_SQUARES[square.idx()];
-        self.bitboard_sides[side] |= BB_SQUARES[square.idx()];
+        self.bitboard_pieces[side][piece] |= BB_SQUARES[square];
+        self.bitboard_sides[side] |= BB_SQUARES[square];
         self.pieces[square] = piece;
     }
 

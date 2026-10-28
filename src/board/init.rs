@@ -34,12 +34,12 @@ impl Board {
 
             while white_pieces > Bitboard::empty() {
                 let square = Square::from(white_pieces.trailing_zeros());
-                white_pieces ^= BB_SQUARES[square.idx()];
+                white_pieces ^= BB_SQUARES[square];
                 self.pieces[square] = piece_type;
             }
             while black_pieces > Bitboard::empty() {
                 let square = Square::from(black_pieces.trailing_zeros());
-                black_pieces ^= BB_SQUARES[square.idx()];
+                black_pieces ^= BB_SQUARES[square];
                 self.pieces[square] = piece_type;
             }
         }

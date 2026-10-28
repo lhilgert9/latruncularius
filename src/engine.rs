@@ -10,7 +10,7 @@ use crate::{
     defs::FEN_START_POSITION,
     engine::cmdline::cmdline,
     misc::perft,
-    movegen::{magic_gen::generate_magics, MoveGenerator},
+    movegen::MoveGenerator,
     types::error::ErrFatal,
     uci::{
         cmd::{UciIn, UciOut},
@@ -54,11 +54,6 @@ impl Engine {
 
         if let Some(depth) = args.perft {
             perft::run(depth, Arc::clone(&self.mg))?;
-            return Ok(());
-        }
-
-        if args.generate_magics {
-            generate_magics();
             return Ok(());
         }
 

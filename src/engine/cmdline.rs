@@ -5,8 +5,6 @@ use clap::Parser;
 pub struct Args {
     #[arg(short, long)]
     pub perft: Option<u8>,
-    #[arg(short = 'm', long)]
-    pub generate_magics: bool,
 }
 
 pub fn cmdline() -> Args {

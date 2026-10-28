@@ -7,7 +7,10 @@ use crate::{
 impl Engine {
     pub fn execute_move(&mut self, _m: &str) -> bool {
         if let Some(m) = self.is_pseudo_legal_move() {
-            self.board.lock().expect(ErrFatal::LOCK).make_move(m)
+            self.board
+                .lock()
+                .expect(ErrFatal::LOCK)
+                .make_move(m, &self.mg)
         } else {
             false
         }

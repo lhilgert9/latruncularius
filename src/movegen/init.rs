@@ -1,132 +1,28 @@
 use crate::{
-    movegen::MoveGenerator,
+    movegen::{
+        magics::Magic,
+        movedata::{KING_MOVES, KNIGHT_MOVES, PAWN_MOVES},
+        MoveGenerator,
+    },
     types::{
         bitboard::Bitboard,
-        file::{File, BB_FILES},
         nrof::NrOf,
-        rank::{Rank, BB_RANKS},
         side::EverySide,
         square::{EverySquare, Square, BB_SQUARES},
     },
 };
 
-struct PieceMove {
-    offset: i8,
-    impossible: Bitboard,
+pub struct InitMagicsContext<'a> {
+    pub get_blocker_mask_fn: fn(Square) -> Bitboard,
+    pub get_attack_boards_fn: fn(Square, &[Bitboard]) -> Vec<Bitboard>,
+    pub magics: &'a mut EverySquare<Magic>,
+    pub attacks: &'a mut Vec<Bitboard>,
+    pub magic_numbers: [u64; NrOf::SQUARES],
 }
-
-const KING_MOVES: [PieceMove; 8] = [
-    PieceMove {
-        offset: 8,
-        impossible: BB_RANKS[Rank::R8.idx()],
-    },
-    PieceMove {
-        offset: -8,
-        impossible: BB_RANKS[Rank::R1.idx()],
-    },
-    PieceMove {
-        offset: 1,
-        impossible: BB_FILES[File::H.idx()],
-    },
-    PieceMove {
-        offset: -1,
-        impossible: BB_FILES[File::A.idx()],
-    },
-    PieceMove {
-        offset: 7,
-        impossible: BB_FILES[File::A.idx()].bitor(BB_RANKS[Rank::R8.idx()]),
-    },
-    PieceMove {
-        offset: -7,
-        impossible: BB_FILES[File::H.idx()].bitor(BB_RANKS[Rank::R1.idx()]),
-    },
-    PieceMove {
-        offset: 9,
-        impossible: BB_FILES[File::H.idx()].bitor(BB_RANKS[Rank::R8.idx()]),
-    },
-    PieceMove {
-        offset: -9,
-        impossible: BB_FILES[File::A.idx()].bitor(BB_RANKS[Rank::R1.idx()]),
-    },
-];
-
-const KNIGHT_MOVES: [PieceMove; 8] = [
-    PieceMove {
-        offset: 15,
-        impossible: BB_RANKS[Rank::R8.idx()]
-            .bitor(BB_RANKS[Rank::R7.idx()])
-            .bitor(BB_FILES[File::A.idx()]),
-    },
-    PieceMove {
-        offset: 17,
-        impossible: BB_RANKS[Rank::R8.idx()]
-            .bitor(BB_RANKS[Rank::R7.idx()])
-            .bitor(BB_FILES[File::H.idx()]),
-    },
-    PieceMove {
-        offset: 10,
-        impossible: BB_FILES[File::H.idx()]
-            .bitor(BB_FILES[File::G.idx()])
-            .bitor(BB_RANKS[Rank::R8.idx()]),
-    },
-    PieceMove {
-        offset: -6,
-        impossible: BB_FILES[File::H.idx()]
-            .bitor(BB_FILES[File::G.idx()])
-            .bitor(BB_RANKS[Rank::R1.idx()]),
-    },
-    PieceMove {
-        offset: -17,
-        impossible: BB_RANKS[Rank::R1.idx()]
-            .bitor(BB_RANKS[Rank::R2.idx()])
-            .bitor(BB_FILES[File::A.idx()]),
-    },
-    PieceMove {
-        offset: -15,
-        impossible: BB_RANKS[Rank::R1.idx()]
-            .bitor(BB_RANKS[Rank::R2.idx()])
-            .bitor(BB_FILES[File::H.idx()]),
-    },
-    PieceMove {
-        offset: 6,
-        impossible: BB_FILES[File::A.idx()]
-            .bitor(BB_FILES[File::B.idx()])
-            .bitor(BB_RANKS[Rank::R8.idx()]),
-    },
-    PieceMove {
-        offset: -10,
-        impossible: BB_FILES[File::A.idx()]
-            .bitor(BB_FILES[File::B.idx()])
-            .bitor(BB_RANKS[Rank::R1.idx()]),
-    },
-];
-
-const PAWN_MOVES: [[PieceMove; 2]; NrOf::SIDES] = [
-    [
-        PieceMove {
-            offset: 7,
-            impossible: BB_FILES[File::A.idx()].bitor(BB_RANKS[Rank::R8.idx()]),
-        },
-        PieceMove {
-            offset: 9,
-            impossible: BB_FILES[File::H.idx()].bitor(BB_RANKS[Rank::R8.idx()]),
-        },
-    ],
-    [
-        PieceMove {
-            offset: -9,
-            impossible: BB_FILES[File::A.idx()].bitor(BB_RANKS[Rank::R1.idx()]),
-        },
-        PieceMove {
-            offset: -7,
-            impossible: BB_FILES[File::H.idx()].bitor(BB_RANKS[Rank::R1.idx()]),
-        },
-    ],
-];
 
 impl MoveGenerator {
     pub(super) fn init_king(king_attacks: &mut EverySquare<Bitboard>) {
-        for square in (Square::A1 as usize)..=(Square::H8 as usize) {
+        for square in Square::range() {
             let from = BB_SQUARES[square];
             let mut moves = Bitboard::empty();
 
@@ -146,7 +42,7 @@ impl MoveGenerator {
     }
 
     pub(super) fn init_knight(knight_attacks: &mut EverySquare<Bitboard>) {
-        for square in (Square::A1 as usize)..=(Square::H8 as usize) {
+        for square in Square::range() {
             let from = BB_SQUARES[square];
             let mut moves = Bitboard::empty();
 
@@ -166,7 +62,7 @@ impl MoveGenerator {
     }
 
     pub(super) fn init_pawns(pawn_attacks: &mut EverySide<EverySquare<Bitboard>>) {
-        for square in (Square::A1 as usize)..=(Square::H8 as usize) {
+        for square in Square::range() {
             let from = BB_SQUARES[square];
 
             for side in 0..NrOf::SIDES {
@@ -185,6 +81,51 @@ impl MoveGenerator {
 
                 pawn_attacks[side.into()][square.into()] = moves;
             }
+        }
+    }
+
+    pub(super) fn init_magics(context: InitMagicsContext) {
+        let mut section_start = 0;
+
+        for square in Square::range() {
+            let blocker_mask = (context.get_blocker_mask_fn)(Square::from(square));
+
+            let relevant_bits = blocker_mask.count_ones();
+
+            let permutations = 2u64.pow(relevant_bits);
+
+            let section_end = section_start + permutations;
+
+            let blocker_boards = MoveGenerator::generate_blocker_boards(blocker_mask);
+
+            let attack_boards =
+                (context.get_attack_boards_fn)(Square::from(square), &blocker_boards);
+
+            let magic = Magic {
+                mask: blocker_mask,
+                shift: (64 - relevant_bits) as u64,
+                offset: section_start,
+                number: context.magic_numbers[square],
+            };
+
+            for (blocker_board, attack_board) in blocker_boards.iter().zip(attack_boards.iter()) {
+                let index = magic.get_index(*blocker_board);
+
+                assert!(
+                    context.attacks[index] == Bitboard::empty(),
+                    "Error in Magics: Attack table index collision."
+                );
+
+                assert!(
+                    (section_start as usize..section_end as usize).contains(&index),
+                    "Error in Magics: Index is out of bounds."
+                );
+
+                context.attacks[index] = *attack_board;
+            }
+            context.magics[square.into()] = magic;
+
+            section_start += permutations;
         }
     }
 }

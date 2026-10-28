@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Index, IndexMut},
+    ops::{Index, IndexMut, RangeInclusive},
 };
 
 use crate::types::{bitboard::Bitboard, nrof::NrOf};
@@ -57,8 +57,32 @@ pub enum Square {
 }
 
 impl Square {
+    #[inline(always)]
     pub fn idx(self) -> usize {
         self as usize
+    }
+
+    #[inline(always)]
+    pub fn range() -> RangeInclusive<usize> {
+        RANGE
+    }
+}
+
+const RANGE: RangeInclusive<usize> = (Square::A1 as usize)..=(Square::H8 as usize);
+
+impl<T> Index<Square> for [T; NrOf::SQUARES] {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, index: Square) -> &Self::Output {
+        &self[index as usize]
+    }
+}
+
+impl<T> IndexMut<Square> for [T; NrOf::SQUARES] {
+    #[inline(always)]
+    fn index_mut(&mut self, index: Square) -> &mut Self::Output {
+        &mut self[index as usize]
     }
 }
 

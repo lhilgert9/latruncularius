@@ -1,4 +1,6 @@
 use crate::engine::Engine;
+#[cfg(feature = "wizardry")]
+use crate::movegen::wizardry::generate_magics;
 
 mod board;
 mod defs;
@@ -8,6 +10,12 @@ mod movegen;
 mod types;
 mod uci;
 
+#[cfg(feature = "wizardry")]
+fn main() {
+    generate_magics();
+}
+
+#[cfg(not(feature = "wizardry"))]
 fn main() {
     let mut engine = Engine::new();
     let result = engine.run();
