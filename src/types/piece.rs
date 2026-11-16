@@ -64,6 +64,11 @@ impl Piece {
             _ => "",
         }
     }
+
+    #[inline(always)]
+    pub const fn idx(self) -> usize {
+        self as usize
+    }
 }
 
 impl From<usize> for Piece {

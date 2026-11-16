@@ -44,6 +44,11 @@ impl Side {
     pub fn flip_mut(&mut self) {
         *self = self.other();
     }
+
+    #[inline(always)]
+    pub const fn idx(self) -> usize {
+        self as usize
+    }
 }
 
 impl From<usize> for Side {

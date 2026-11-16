@@ -21,8 +21,9 @@ impl Uci {
                     println!("uciok");
                 }
                 UciOut::ReadyOk => println!("readyok"),
-                UciOut::Quit => break,
                 UciOut::InfoString(message) => println!("info string {message}"),
+                UciOut::BestMove(best_move) => println!("bestmove {}", best_move),
+                UciOut::Quit => break,
                 UciOut::Custom(message) => println!("{message}"),
             }
         });

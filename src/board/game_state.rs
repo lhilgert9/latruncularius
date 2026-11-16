@@ -1,4 +1,5 @@
 use crate::{
+    board::zobrist::ZobristKey,
     movegen::defs::Move,
     types::{bitboard::Bitboard, side::Side, square::Square},
 };
@@ -11,6 +12,7 @@ pub struct GameState {
     pub en_passant: Option<Square>,
     pub full_move_number: u16,
     pub next_move: Move,
+    pub zobrist_key: ZobristKey,
 }
 
 impl GameState {
@@ -22,6 +24,7 @@ impl GameState {
             en_passant: None,
             full_move_number: 0,
             next_move: Move::empty(),
+            zobrist_key: 0,
         }
     }
 
@@ -31,5 +34,6 @@ impl GameState {
         self.half_move_clock = 0;
         self.en_passant = None;
         self.full_move_number = 0;
+        self.zobrist_key = 0;
     }
 }

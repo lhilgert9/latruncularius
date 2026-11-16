@@ -1,14 +1,17 @@
 pub mod defs;
 mod display;
-pub mod fen;
+mod fen;
 mod game_state;
 mod history;
 mod init;
 mod moving;
 mod utils;
+mod zobrist;
+
+use std::sync::Arc;
 
 use crate::{
-    board::{game_state::GameState, history::History},
+    board::{game_state::GameState, history::History, zobrist::ZobristRandoms},
     types::{
         bitboard::Bitboard,
         piece::{EveryPiece, Piece},
@@ -17,13 +20,14 @@ use crate::{
     },
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone)]
 pub struct Board {
     pub bitboard_pieces: EverySide<EveryPiece<Bitboard>>,
     pub bitboard_sides: EverySide<Bitboard>,
     pub pieces: EverySquare<Piece>,
     pub game_state: GameState,
     history: History,
+    zobrist_randoms: Arc<ZobristRandoms>,
 }
 
 impl Board {
@@ -34,6 +38,7 @@ impl Board {
             pieces: EverySquare::new(Piece::None),
             game_state: GameState::new(),
             history: History::new(),
+            zobrist_randoms: Arc::new(ZobristRandoms::new()),
         }
     }
 }

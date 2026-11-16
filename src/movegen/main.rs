@@ -1,6 +1,6 @@
 use crate::{
     board::Board,
-    movegen::{move_list::MoveList, MoveGenerator},
+    movegen::{MoveGenerator, move_list::MoveList},
     types::{bitboard::Bitboard, piece::Piece, side::Side, square::Square},
 };
 

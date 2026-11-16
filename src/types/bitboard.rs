@@ -51,6 +51,11 @@ impl Bitboard {
     pub const fn idx(self) -> usize {
         self.0 as usize
     }
+
+    #[inline(always)]
+    pub const fn as_u64(self) -> u64 {
+        self.0
+    }
 }
 
 impl Shl<u64> for Bitboard {

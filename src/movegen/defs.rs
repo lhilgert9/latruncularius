@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::types::{piece::Piece, square::Square};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Move {
     piece: Piece,
     from: Square,
@@ -85,6 +85,12 @@ impl Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}{}", self.from, self.to, self.promotion.promo_str())
+        write!(
+            f,
+            "{}{}{}",
+            self.from.name(),
+            self.to.name(),
+            self.promotion.promo_str()
+        )
     }
 }

@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     board::Board,
+    evaluation::Evaluation,
     types::{bitboard::Bitboard, castling::CastlingRights, nrof::NrOf, piece::Piece, side::Side},
 };
 
@@ -94,6 +95,14 @@ impl Board {
         meta.push_str(format!("{:<20}{}\n", "En Passant:", en_passant).as_str());
         meta.push_str(format!("{:<20}{}\n", "Half-move clock:", hmc).as_str());
         meta.push_str(format!("{:<20}{}\n", "Full-move number:", fmn).as_str());
+        meta.push_str(
+            format!(
+                "{:<20}{}\n",
+                "Evaluation:",
+                Evaluation::evaluate_position(self)
+            )
+            .as_str(),
+        );
         meta
     }
 }

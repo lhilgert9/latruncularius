@@ -1,3 +1,5 @@
+use crate::movegen::defs::Move;
+
 #[derive(Eq, PartialEq)]
 pub enum UciIn {
     Uci,
@@ -5,11 +7,12 @@ pub enum UciIn {
     UciNewGame,
     Position(String, Vec<String>),
     // SetOption(String, Option<String>),
-    // GoInfinite,
-    // GoDepth(i8),
-    // GoMoveTime(u128),
-    // GoNodes(usize),
+    GoInfinite,
+    GoDepth(u8),
+    GoMoveTime(u128),
+    GoNodes(usize),
     // GoGameTime(GameTime),
+    GoPerft(u8),
     DebugOff,
     DebugOn,
     Stop,
@@ -25,7 +28,7 @@ pub enum UciOut {
     // SearchCurrMove(SearchCurrentMove),
     // SearchSummary(SearchSummary),
     // SearchStats(SearchStats),
-    // BestMove(Move),
+    BestMove(Move),
     InfoString(String),
     Quit,
     Custom(String),

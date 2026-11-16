@@ -1,14 +1,29 @@
 use crate::{
     board::Board,
-    movegen::{defs::Move, MoveGenerator},
+    movegen::{MoveGenerator, defs::Move},
     types::{
         bitboard::Bitboard,
         castling::CastlingRights,
+        nrof::NrOf,
         piece::Piece,
         side::Side,
-        square::{Square, BB_SQUARES},
+        square::{BB_SQUARES, Square},
     },
 };
+
+const CASTLING_RIGHTS: [u64; NrOf::SQUARES] = init_castling_rights();
+const fn init_castling_rights() -> [u64; NrOf::SQUARES] {
+    let mut cr = [CastlingRights::ALL.as_u64(); NrOf::SQUARES];
+
+    cr[Square::A1.idx()] &= !CastlingRights::WQ.as_u64();
+    cr[Square::E1.idx()] &= !CastlingRights::WK.as_u64() & !CastlingRights::WQ.as_u64();
+    cr[Square::H1.idx()] &= !CastlingRights::WK.as_u64();
+    cr[Square::A8.idx()] &= !CastlingRights::BQ.as_u64();
+    cr[Square::E8.idx()] &= !CastlingRights::BK.as_u64() & !CastlingRights::BQ.as_u64();
+    cr[Square::H8.idx()] &= !CastlingRights::BK.as_u64();
+
+    cr
+}
 
 impl Board {
     pub fn make_move(&mut self, m: Move, mg: &MoveGenerator) -> bool {
@@ -32,27 +47,16 @@ impl Board {
         let is_capture = captured != Piece::None;
 
         self.game_state.half_move_clock += 1;
-        self.game_state.en_passant = None;
+
+        if self.game_state.en_passant.is_some() {
+            self.clear_ep_square();
+        }
 
         if is_capture {
             self.remove_piece(opponent, captured, to);
             self.game_state.half_move_clock = 0;
-            if (piece == Piece::Rook) && self.game_state.castling > Bitboard::empty() {
-                match from {
-                    Square::A1 => {
-                        self.game_state.castling &= CastlingRights::ALL & !CastlingRights::WQ
-                    }
-                    Square::H1 => {
-                        self.game_state.castling &= CastlingRights::ALL & !CastlingRights::WK
-                    }
-                    Square::A8 => {
-                        self.game_state.castling &= CastlingRights::ALL & !CastlingRights::BQ
-                    }
-                    Square::H8 => {
-                        self.game_state.castling &= CastlingRights::ALL & !CastlingRights::BK
-                    }
-                    _ => (),
-                }
+            if captured == Piece::Rook && self.game_state.castling > Bitboard::empty() {
+                self.update_castling(self.game_state.castling & Bitboard::new(CASTLING_RIGHTS[to]));
             }
         }
 
@@ -69,28 +73,14 @@ impl Board {
             }
 
             if double_step {
-                self.game_state.en_passant = Some(Square::from(to as u8 ^ 8))
+                self.set_ep_square(Square::from(to as u8 ^ 8));
             }
         }
 
         if (piece == Piece::King || piece == Piece::Rook)
             && self.game_state.castling > Bitboard::empty()
         {
-            match from {
-                Square::A1 => self.game_state.castling &= CastlingRights::ALL & !CastlingRights::WQ,
-                Square::E1 => {
-                    self.game_state.castling &=
-                        CastlingRights::ALL & !CastlingRights::WQ & !CastlingRights::WK
-                }
-                Square::H1 => self.game_state.castling &= CastlingRights::ALL & !CastlingRights::WK,
-                Square::A8 => self.game_state.castling &= CastlingRights::ALL & !CastlingRights::BQ,
-                Square::E8 => {
-                    self.game_state.castling &=
-                        CastlingRights::ALL & !CastlingRights::BQ & !CastlingRights::BK
-                }
-                Square::H8 => self.game_state.castling &= CastlingRights::ALL & !CastlingRights::BK,
-                _ => (),
-            }
+            self.update_castling(self.game_state.castling & Bitboard::new(CASTLING_RIGHTS[from]));
         }
 
         if castling {
@@ -137,28 +127,28 @@ impl Board {
         let en_passant = m.en_passant();
 
         if promotion != Piece::None {
-            self.remove_piece(us, promotion, to);
-            self.put_piece(us, Piece::Pawn, from);
+            remove_piece(self, us, promotion, to);
+            put_piece(self, us, Piece::Pawn, from);
         } else {
-            self.move_piece(us, piece, to, from);
+            reverse_move(self, us, piece, from, to);
         }
 
         if castling {
             match to {
-                Square::G1 => self.move_piece(us, Piece::Rook, Square::F1, Square::H1),
-                Square::C1 => self.move_piece(us, Piece::Rook, Square::D1, Square::A1),
-                Square::G8 => self.move_piece(us, Piece::Rook, Square::F8, Square::H8),
-                Square::C8 => self.move_piece(us, Piece::Rook, Square::D8, Square::A8),
+                Square::G1 => reverse_move(self, us, Piece::Rook, Square::H1, Square::F1),
+                Square::C1 => reverse_move(self, us, Piece::Rook, Square::A1, Square::D1),
+                Square::G8 => reverse_move(self, us, Piece::Rook, Square::H8, Square::F8),
+                Square::C8 => reverse_move(self, us, Piece::Rook, Square::A8, Square::D8),
                 _ => panic!("Error reversing rook castling move"),
             }
         }
 
         if captured != Piece::None {
-            self.put_piece(opponent, captured, to);
+            put_piece(self, opponent, captured, to);
         }
 
         if en_passant {
-            self.put_piece(opponent, Piece::Pawn, Square::from(to as u8 ^ 8));
+            put_piece(self, opponent, Piece::Pawn, Square::from(to as u8 ^ 8));
         }
     }
 }
@@ -168,12 +158,14 @@ impl Board {
         self.bitboard_pieces[side][piece] ^= BB_SQUARES[square];
         self.bitboard_sides[side] ^= BB_SQUARES[square];
         self.pieces[square] = Piece::None;
+        self.game_state.zobrist_key ^= self.zobrist_randoms.piece(side, piece, square);
     }
 
     fn put_piece(&mut self, side: Side, piece: Piece, square: Square) {
         self.bitboard_pieces[side][piece] |= BB_SQUARES[square];
         self.bitboard_sides[side] |= BB_SQUARES[square];
         self.pieces[square] = piece;
+        self.game_state.zobrist_key ^= self.zobrist_randoms.piece(side, piece, square);
     }
 
     fn move_piece(&mut self, side: Side, piece: Piece, from: Square, to: Square) {
@@ -181,7 +173,43 @@ impl Board {
         self.put_piece(side, piece, to);
     }
 
+    fn set_ep_square(&mut self, square: Square) {
+        self.game_state.zobrist_key ^= self.zobrist_randoms.en_passant(self.game_state.en_passant);
+        self.game_state.en_passant = Some(square);
+        self.game_state.zobrist_key ^= self.zobrist_randoms.en_passant(self.game_state.en_passant);
+    }
+
+    fn clear_ep_square(&mut self) {
+        self.game_state.zobrist_key ^= self.zobrist_randoms.en_passant(self.game_state.en_passant);
+        self.game_state.en_passant = None;
+        self.game_state.zobrist_key ^= self.zobrist_randoms.en_passant(self.game_state.en_passant);
+    }
+
     fn swap_side(&mut self) {
         self.game_state.active_side.flip_mut();
+        self.game_state.zobrist_key ^= self.zobrist_randoms.black();
     }
+
+    fn update_castling(&mut self, new_castling_rights: Bitboard) {
+        self.game_state.zobrist_key ^= self.zobrist_randoms.castling(self.game_state.castling);
+        self.game_state.castling = new_castling_rights;
+        self.game_state.zobrist_key ^= self.zobrist_randoms.castling(self.game_state.castling);
+    }
+}
+
+fn remove_piece(board: &mut Board, side: Side, piece: Piece, square: Square) {
+    board.bitboard_pieces[side][piece] ^= BB_SQUARES[square];
+    board.bitboard_sides[side] ^= BB_SQUARES[square];
+    board.pieces[square] = Piece::None;
+}
+
+fn put_piece(board: &mut Board, side: Side, piece: Piece, square: Square) {
+    board.bitboard_pieces[side][piece] |= BB_SQUARES[square];
+    board.bitboard_sides[side] |= BB_SQUARES[square];
+    board.pieces[square] = piece;
+}
+
+fn reverse_move(board: &mut Board, side: Side, piece: Piece, from: Square, to: Square) {
+    remove_piece(board, side, piece, to);
+    put_piece(board, side, piece, from);
 }

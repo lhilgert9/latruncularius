@@ -1,20 +1,22 @@
-mod cmdline;
 mod main_loop;
+mod search_handler;
 mod uci_handler;
 mod utils;
 
-use std::sync::{mpsc::Receiver, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc::Receiver};
 
 use crate::{
-    board::{fen::FenResult, Board},
+    board::{Board, defs::FenResult},
     defs::FEN_START_POSITION,
-    engine::cmdline::cmdline,
-    misc::perft,
     movegen::MoveGenerator,
+    search::{
+        Search,
+        defs::{SearchControl, SearchReport},
+    },
     types::error::ErrFatal,
     uci::{
-        cmd::{UciIn, UciOut},
         Uci,
+        cmd::{UciIn, UciOut},
     },
 };
 
@@ -25,10 +27,12 @@ pub struct Engine {
     board: Arc<Mutex<Board>>,
     mg: Arc<MoveGenerator>,
     input_rx: Option<Receiver<EngineInput>>,
+    search: Search,
 }
 
 pub enum EngineInput {
     Uci(UciIn),
+    Search(SearchReport),
 }
 
 impl Engine {
@@ -40,6 +44,7 @@ impl Engine {
             board: Arc::new(Mutex::new(Board::new())),
             mg: Arc::new(MoveGenerator::new()),
             input_rx: None,
+            search: Search::new(),
         }
     }
 
@@ -50,13 +55,6 @@ impl Engine {
             .setup_fen(FEN_START_POSITION)
             .expect(ErrFatal::NEW_GAME);
 
-        let args = cmdline();
-
-        if let Some(depth) = args.perft {
-            perft::run(depth, Arc::clone(&self.mg))?;
-            return Ok(());
-        }
-
         self.main_loop();
 
         Ok(())
@@ -65,6 +63,7 @@ impl Engine {
 
 impl Engine {
     fn quit(&mut self) {
+        self.search.send(SearchControl::Quit);
         self.uci.send(UciOut::Quit);
         self.quit = true;
     }

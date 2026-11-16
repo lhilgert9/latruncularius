@@ -5,8 +5,10 @@ use crate::movegen::wizardry::generate_magics;
 mod board;
 mod defs;
 mod engine;
+mod evaluation;
 mod misc;
 mod movegen;
+mod search;
 mod types;
 mod uci;
 
