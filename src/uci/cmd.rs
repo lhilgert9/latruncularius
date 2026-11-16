@@ -6,7 +6,7 @@ pub enum UciIn {
     IsReady,
     UciNewGame,
     Position(String, Vec<String>),
-    // SetOption(String, Option<String>),
+    SetOption(String, Option<String>),
     GoInfinite,
     GoDepth(u8),
     GoMoveTime(u128),

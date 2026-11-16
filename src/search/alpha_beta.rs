@@ -7,12 +7,18 @@ use crate::search::Search;
 
 impl Search {
     pub fn alpha_beta(
-        depth: i8,
+        mut depth: i8,
         mut alpha: i32,
         beta: i32,
         board: &mut Board,
         mg: &MoveGenerator,
     ) -> (i32, Move) {
+        let is_check =
+            mg.is_square_attacked(board, board.opponent(), board.king_square(board.us()));
+        if is_check {
+            depth += 1;
+        }
+
         if depth <= 0 {
             return (Evaluation::evaluate_position(board), Move::empty());
         }

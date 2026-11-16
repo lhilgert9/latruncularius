@@ -9,6 +9,7 @@ mod evaluation;
 mod misc;
 mod movegen;
 mod search;
+mod transposition;
 mod types;
 mod uci;
 

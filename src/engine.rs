@@ -1,5 +1,6 @@
 mod main_loop;
 mod search_handler;
+mod settings;
 mod uci_handler;
 mod utils;
 
@@ -8,6 +9,7 @@ use std::sync::{Arc, Mutex, mpsc::Receiver};
 use crate::{
     board::{Board, defs::FenResult},
     defs::FEN_START_POSITION,
+    engine::settings::Settings,
     movegen::MoveGenerator,
     search::{
         Search,
@@ -28,6 +30,7 @@ pub struct Engine {
     mg: Arc<MoveGenerator>,
     input_rx: Option<Receiver<EngineInput>>,
     search: Search,
+    settings: Settings,
 }
 
 pub enum EngineInput {
@@ -44,7 +47,8 @@ impl Engine {
             board: Arc::new(Mutex::new(Board::new())),
             mg: Arc::new(MoveGenerator::new()),
             input_rx: None,
-            search: Search::new(),
+            search: Search::new(16),
+            settings: Settings::default(),
         }
     }
 

@@ -1,3 +1,5 @@
+pub use crate::search::search_data::SearchData;
+
 use std::fmt::Display;
 
 use crate::movegen::defs::Move;

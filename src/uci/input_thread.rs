@@ -42,6 +42,7 @@ impl Uci {
             cmd if cmd == "board" => UciIn::Board,
             cmd if cmd.starts_with("position") => position(&cmd),
             cmd if cmd.starts_with("go") => go(&cmd),
+            cmd if cmd.starts_with("setoption") => setoption(&cmd),
             _ => UciIn::Unknown(input),
         }
     }
@@ -151,4 +152,35 @@ fn go(cmd: &str) -> UciIn {
     }
 
     received
+}
+
+fn setoption(cmd: &str) -> UciIn {
+    enum Tokens {
+        Empty,
+        Name,
+        Value,
+    }
+
+    let stream: Vec<&str> = cmd.split_whitespace().collect();
+    let mut token = Tokens::Empty;
+    let mut name: String = String::from("");
+    let mut value: Option<String> = None;
+
+    for s in stream {
+        match s {
+            "setoption" => (),
+            "name" => token = Tokens::Name,
+            "value" => token = Tokens::Value,
+            _ => match token {
+                Tokens::Name => {
+                    name.push_str(s);
+                    name.push(' ');
+                }
+                Tokens::Value => value = Some(s.to_lowercase()),
+                Tokens::Empty => (),
+            },
+        }
+    }
+
+    UciIn::SetOption(name.trim().to_lowercase(), value)
 }

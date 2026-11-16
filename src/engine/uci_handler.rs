@@ -21,23 +21,9 @@ impl Engine {
                     .expect(ErrFatal::LOCK)
                     .setup_fen(FEN_START_POSITION)
                     .expect(ErrFatal::NEW_GAME);
+                self.search.transposition_clear();
             }
-            UciIn::Position(fen, moves) => {
-                let fen_result = self.board.lock().expect(ErrFatal::LOCK).setup_fen(&fen);
-                if fen_result.is_ok() {
-                    for m in moves.iter() {
-                        let result = self.execute_move(m);
-                        if !result && self.debug {
-                            let fail = format!("Not legal move: {}", m);
-                            self.uci.send(UciOut::InfoString(fail));
-                            break;
-                        }
-                    }
-                } else if self.debug {
-                    self.uci
-                        .send(UciOut::InfoString(String::from("FEN setup failed")));
-                }
-            }
+            UciIn::Position(fen, moves) => self.position(fen, &moves),
             UciIn::GoInfinite => self.search.send(SearchControl::Start(SearchParams {
                 depth: 0,
                 mode: SearchMode::Infinite,
@@ -58,6 +44,14 @@ impl Engine {
                 depth,
                 mode: SearchMode::Perft,
             })),
+            UciIn::SetOption(name, value) => {
+                if !name.is_empty() {
+                    self.setoption(name, value)
+                } else if self.debug {
+                    self.uci
+                        .send(UciOut::InfoString(String::from("Option must have a name")));
+                }
+            }
             UciIn::Board => self.uci.send(UciOut::Custom(format!(
                 "{}",
                 self.board.lock().expect(ErrFatal::LOCK)
@@ -66,5 +60,53 @@ impl Engine {
                 .uci
                 .send(UciOut::InfoString(format!("Unkown command: '{}'", cmd))),
         };
+    }
+}
+
+impl Engine {
+    fn position(&mut self, fen: String, moves: &[String]) {
+        let fen_result = self.board.lock().expect(ErrFatal::LOCK).setup_fen(&fen);
+
+        if fen_result.is_ok() {
+            for m in moves.iter() {
+                let result = self.execute_move(m);
+                if !result && self.debug {
+                    let fail = format!("Not legal move: {}", m);
+                    self.uci.send(UciOut::InfoString(fail));
+                    break;
+                }
+            }
+        } else if self.debug {
+            self.uci
+                .send(UciOut::InfoString(String::from("FEN setup failed")));
+        }
+    }
+
+    fn setoption(&mut self, option: String, value: Option<String>) {
+        match option {
+            option if option == "hash" => {
+                if let Some(value) = value {
+                    if let Ok(size) = value.parse::<usize>() {
+                        self.settings.tt_size = size;
+                        self.search.transposition_resize(size);
+                    } else if self.debug {
+                        self.uci.send(UciOut::InfoString(String::from(
+                            "Value must be integer for option",
+                        )));
+                    }
+                } else if self.debug {
+                    self.uci.send(UciOut::InfoString(String::from(
+                        "Value is required for option",
+                    )));
+                }
+            }
+            option if option == "clear hash" => self.search.transposition_clear(),
+            _ => {
+                if self.debug {
+                    self.uci
+                        .send(UciOut::InfoString(String::from("Unknown option name")));
+                }
+            }
+        }
     }
 }

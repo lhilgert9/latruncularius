@@ -94,3 +94,14 @@ impl Display for Move {
         )
     }
 }
+
+#[derive(Clone, Copy, Default)]
+pub struct ShortMove {
+    data: u32,
+}
+
+impl ShortMove {
+    pub fn new(data: u32) -> Self {
+        Self { data }
+    }
+}

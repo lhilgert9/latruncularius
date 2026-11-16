@@ -1,5 +1,6 @@
 mod alpha_beta;
 pub mod defs;
+mod search_data;
 
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -13,20 +14,24 @@ use crate::engine::EngineInput;
 use crate::misc::perft;
 use crate::movegen::MoveGenerator;
 use crate::search::defs::SearchControl;
+use crate::search::defs::SearchData;
 use crate::search::defs::SearchMode;
 use crate::search::defs::SearchReport;
+use crate::transposition::defs::Transposition;
 use crate::types::error::ErrFatal;
 
 pub struct Search {
     search_thread: Option<JoinHandle<()>>,
     control_tx: Option<Sender<SearchControl>>,
+    transposition: Arc<Mutex<Transposition<SearchData>>>,
 }
 
 impl Search {
-    pub fn new() -> Self {
+    pub fn new(tt_size: usize) -> Self {
         Self {
             search_thread: None,
             control_tx: None,
+            transposition: Arc::new(Mutex::new(Transposition::<SearchData>::new(tt_size))),
         }
     }
 
@@ -51,7 +56,7 @@ impl Search {
                         let mut board = mtx_board.clone();
                         std::mem::drop(mtx_board);
                         if sp.mode == SearchMode::Perft {
-                            perft::run(sp.depth, &mut board, Arc::clone(&mg));
+                            perft::run(sp.depth, &mut board, Arc::clone(&mg), 1024);
                         } else {
                             let best_move =
                                 Search::alpha_beta(8, i32::MIN, i32::MAX, &mut board, &mg).1;
@@ -66,6 +71,17 @@ impl Search {
         });
         self.search_thread = Some(h);
         self.control_tx = Some(control_tx);
+    }
+
+    pub fn transposition_clear(&mut self) {
+        self.transposition.lock().expect(ErrFatal::LOCK).clear();
+    }
+
+    pub fn transposition_resize(&mut self, megabytes: usize) {
+        self.transposition
+            .lock()
+            .expect(ErrFatal::LOCK)
+            .resize(megabytes);
     }
 
     pub fn send(&mut self, cmd: SearchControl) {
