@@ -2,32 +2,31 @@ use std::fmt::Display;
 
 use crate::types::{piece::Piece, square::Square};
 
+struct Shift;
+impl Shift {
+    pub const PIECE: usize = 0;
+    pub const FROM_SQ: usize = 3;
+    pub const TO_SQ: usize = 9;
+    pub const CAPTURE: usize = 15;
+    pub const PROMOTION: usize = 18;
+    pub const EN_PASSANT: usize = 21;
+    pub const DOUBLE_STEP: usize = 22;
+    pub const CASTLING: usize = 23;
+    pub const SORTSCORE: usize = 24;
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Move {
-    piece: Piece,
-    from: Square,
-    to: Square,
-    captured: Piece,
-    promotion: Piece,
-    en_passant: bool,
-    double_step: bool,
-    castling: bool,
+    data: usize,
 }
 
 impl Move {
+    #[inline(always)]
     pub fn empty() -> Self {
-        Self {
-            piece: Piece::None,
-            from: Square::A1,
-            to: Square::A1,
-            captured: Piece::None,
-            promotion: Piece::None,
-            en_passant: false,
-            double_step: false,
-            castling: false,
-        }
+        Self { data: 0 }
     }
 
+    #[inline(always)]
     pub fn new(
         piece: Piece,
         from: Square,
@@ -39,47 +38,60 @@ impl Move {
         castling: bool,
     ) -> Self {
         Self {
-            piece,
-            from,
-            to,
-            captured,
-            en_passant,
-            castling,
-            double_step,
-            promotion,
+            data: (castling as usize) << Shift::CASTLING
+                | (double_step as usize) << Shift::DOUBLE_STEP
+                | (en_passant as usize) << Shift::EN_PASSANT
+                | (promotion as usize) << Shift::PROMOTION
+                | (captured as usize) << Shift::CAPTURE
+                | (to as usize) << Shift::TO_SQ
+                | (from as usize) << Shift::FROM_SQ
+                | (piece as usize) << Shift::PIECE,
         }
     }
 
+    #[inline(always)]
     pub fn piece(&self) -> Piece {
-        self.piece
+        Piece::from((self.data >> Shift::PIECE as u64) & 0x7)
     }
 
+    #[inline(always)]
     pub fn from(&self) -> Square {
-        self.from
+        Square::from((self.data >> Shift::FROM_SQ as u64) & 0x3F)
     }
 
+    #[inline(always)]
     pub fn to(&self) -> Square {
-        self.to
+        Square::from((self.data >> Shift::TO_SQ as u64) & 0x3F)
     }
 
+    #[inline(always)]
     pub fn captured(&self) -> Piece {
-        self.captured
+        Piece::from((self.data >> Shift::CAPTURE as u64) & 0x7)
     }
 
+    #[inline(always)]
     pub fn promotion(&self) -> Piece {
-        self.promotion
+        Piece::from((self.data >> Shift::PROMOTION as u64) & 0x7)
     }
 
+    #[inline(always)]
     pub fn en_passant(&self) -> bool {
-        self.en_passant
+        ((self.data >> Shift::EN_PASSANT as u64) & 0x1) as u8 == 1
     }
 
+    #[inline(always)]
     pub fn double_step(&self) -> bool {
-        self.double_step
+        ((self.data >> Shift::DOUBLE_STEP as u64) & 0x1) as u8 == 1
     }
 
+    #[inline(always)]
     pub fn castling(&self) -> bool {
-        self.castling
+        ((self.data >> Shift::CASTLING as u64) & 0x1) as u8 == 1
+    }
+
+    #[inline(always)]
+    pub fn _to_short_move(&self) -> ShortMove {
+        ShortMove::new((self.data & 0xFF_FF_FF) as u32)
     }
 }
 
@@ -88,9 +100,9 @@ impl Display for Move {
         write!(
             f,
             "{}{}{}",
-            self.from.name(),
-            self.to.name(),
-            self.promotion.promo_str()
+            self.from().name(),
+            self.to().name(),
+            self.promotion().promo_str()
         )
     }
 }
